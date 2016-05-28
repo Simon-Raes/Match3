@@ -65,7 +65,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			Vector2 mousePosition = Camera.main.ScreenToWorldPoint (Input.mousePosition);
 			Collider2D hitCollider = Physics2D.OverlapPoint (mousePosition);
 
-			Debug.Log ("mouse pos " + mousePosition.x + " y " + mousePosition.y + " ");    
+//			Debug.Log ("mouse pos " + mousePosition.x + " y " + mousePosition.y + " ");    
 
 
 			if (hitCollider != null) {
@@ -136,13 +136,13 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			// todo reuse instead of making a new list every time
 			Dictionary<float, int> newTilesForRow = new Dictionary<float,int> ();
 
-			Debug.Log ("gameobjects: " + grid.Length);
-			Debug.Log ("marked for deletion: " + markedForDeletion.Count);
+//			Debug.Log ("gameobjects: " + grid.Length);
+//			Debug.Log ("marked for deletion: " + markedForDeletion.Count);
 
 
 			foreach (Tile g in markedForDeletion) {
 
-				Debug.Log ("will delete tile at : " + g.gameObject.transform.position.x +","+g.gameObject.transform.position.y);
+//				Debug.Log ("will delete tile at : " + g.gameObject.transform.position.x +","+g.gameObject.transform.position.y);
 
 				float tileXPosition = g.transform.position.x;
 				int previousValue = 0;
@@ -193,7 +193,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 					if (movement > 0) {
 						// Already move this tile to his target location in the grid, will be used when checking for matches later.
 
-						Debug.Log ("will move " + x + "," + y);
+//						Debug.Log ("will move " + x + "," + y);
 						grid [(int)x, (int)y - movement] = tile;
 						grid [(int)x, (int)y] = null;
 						tile.setTileMovementListener (this);	
@@ -204,7 +204,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				}
 
 			}
-			Debug.Log (String.Format("will move {0} tiles", tilesToMove));
+//			Debug.Log (String.Format("will move {0} tiles", tilesToMove));
 
 
 		} else {
@@ -217,7 +217,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		movedTiles++;
 		Debug.Log ("move finished " + movedTiles);
 		if (movedTiles == tilesToMove) {
-			Debug.Log ("will now check matches again after moving");
+//			Debug.Log ("will now check matches again after moving");
 			movedTiles = 0;
 			tilesToMove = 0;
 			checkMatches ();
