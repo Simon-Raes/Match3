@@ -83,7 +83,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 	private void checkMatches ()
 	{
-		List<Tile> markedForDeletion = new List<Tile> ();
+		HashSet<Tile> markedForDeletion = new HashSet<Tile> ();
 		List<Tile> matches = new List<Tile> ();
 
 		// Check columns
@@ -130,6 +130,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			}
 		}	
 			
+		// Start deleting them
 		if (markedForDeletion.Count > 0) {
 
 			// todo reuse instead of making a new list every time
@@ -140,6 +141,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 
 			foreach (Tile g in markedForDeletion) {
+
+				Debug.Log ("will delete tile at : " + g.gameObject.transform.position.x +","+g.gameObject.transform.position.y);
 
 				float tileXPosition = g.transform.position.x;
 				int previousValue = 0;
@@ -236,7 +239,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	// utils
 	private Tile spawnRandomTile(Vector2 location)
 	{
-		Tile tile = tiles [UnityEngine.Random.Range (0, tiles.Length)];
+		Tile tile = tiles [UnityEngine.Random.Range (0, 4)];
 		return Instantiate (tile, location, Quaternion.identity) as Tile;
 	}
 
@@ -245,10 +248,10 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	* Clears the list of matches being checked right now. If there were enough for a match, they will be added to the list of
 	* pending deletions.
 	*/
-	private void resetMatches (List<Tile> checking, List<Tile> markedForDeletion)
+	private void resetMatches (List<Tile> checking, HashSet<Tile> markedForDeletion)
 	{
 		if (checking.Count >= minTilesForMatch) {
-			markedForDeletion.AddRange (checking);
+			markedForDeletion.UnionWith (checking);
 		}
 
 		checking.Clear ();

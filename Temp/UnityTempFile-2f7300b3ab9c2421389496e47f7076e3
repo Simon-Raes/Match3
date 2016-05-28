@@ -78,6 +78,6 @@
 -define:UNITY_EDITOR_OSX
 'Assets/scripts/GameManager.cs'
 'Assets/scripts/Tile.cs'
-'Assets/scripts/TileMovementListener.cs'
+'Assets/scripts/interfaces/TileMovementListener.cs'
 -r:'/Applications/Unity/Unity.app/Contents/Frameworks/Mono/lib/mono/unity/System.Runtime.Serialization.dll'
 -r:'/Applications/Unity/Unity.app/Contents/Frameworks/Mono/lib/mono/unity/System.Xml.Linq.dll'

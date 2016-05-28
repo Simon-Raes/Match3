@@ -6,6 +6,7 @@ public class Tile : MonoBehaviour
 {
 
 	private bool moving;
+	public bool markedForDeletion = false;
 
 	private Vector2 startPosition;
 	private Vector2 targetPosition;
