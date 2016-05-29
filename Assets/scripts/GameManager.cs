@@ -32,23 +32,18 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		// columns, rows
 		setupBoard();
 
-		checkMatches ();			
+		checkAndRemoveMatches (grid);			
 	}
 	
 	// Update is called once per frame
 	void Update ()
 	{
 		checkClick ();
-
-		// TODO don't really need to do this 60 times per second? - just at start and after a move
-
-
-		
 	}
 
 	private void setupBoard(){
 
-		// Reserve extra space above where new tiles will be inserted
+		// Reserve extra space above where new tiles can be inserted
 		grid = new Tile[boardSize, boardSize * 2];
 
 		for (int x = 0; x < boardSize; x++) {
@@ -69,19 +64,55 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 
 			if (hitCollider != null) {
+
+
 				var transform = selectionIndicator.transform.position;
-				transform.x = hitCollider.transform.position.x;
-				transform.y = hitCollider.transform.position.y;   
-				selectionIndicator.transform.position = transform;
 
-				//				ctionLocation
+				if (transform.x == -1 && transform.y == -1) {
+					transform.x = hitCollider.transform.position.x;
+					transform.y = hitCollider.transform.position.y;  
 
-				Debug.Log ("Hit " + hitCollider.transform.name + " x " + hitCollider.transform.position.x + " y " + hitCollider.transform.position.y);    
+					selectionIndicator.transform.position = transform;
+
+				} else {
+
+		
+					//todo check if it next to the current selection
+					float xDistance = Math.Abs (transform.x - hitCollider.transform.position.x);
+					float yDistance = Math.Abs (transform.y - hitCollider.transform.position.y);
+
+					if ((xDistance == 0 && yDistance == 1) || (xDistance == 1 && yDistance == 0)) {
+						transform.x = -1;
+						transform.y = -1;
+
+
+						//TODO check validity of move
+						//TODO update checkMatches to accept a grid of items?
+						// That way we can swap the two tiles, run the check and use that new grid if there are matches
+						// and switch back to the old one if there are none
+						// have checkmatches return the list of pendingdeletions
+						// that way you don't have to run checkmatches twice.
+						checkMatches(grid);
+
+					} else {
+						transform.x = hitCollider.transform.position.x;
+						transform.y = hitCollider.transform.position.y;  
+					}
+  
+					selectionIndicator.transform.position = transform;
+				}
+
 			}
 		}
 	}
 
-	private void checkMatches ()
+	private void checkAndRemoveMatches(Tile[,] inGrid){
+		HashSet<Tile> matches = checkMatches (inGrid);
+		clearMatches (matches);
+	}
+
+
+	private HashSet<Tile> checkMatches (Tile[,] inGrid)
 	{
 		HashSet<Tile> markedForDeletion = new HashSet<Tile> ();
 		List<Tile> matches = new List<Tile> ();
@@ -94,7 +125,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 			for (int y = 0; y < boardSize; y++) {
 
-				Tile currentObject = grid [x, y];
+				Tile currentObject = inGrid [x, y];
 
 				if (matches.Count > 0 && !matches [0].tag.Equals (currentObject.tag)) {
 
@@ -118,7 +149,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 			for (int x = 0; x < boardSize; x++) {
 
-				Tile currentObject = grid [x, y];
+				Tile currentObject = inGrid [x, y];
 
 				if (matches.Count > 0 && !matches [0].tag.Equals (currentObject.tag)) {
 
@@ -129,6 +160,11 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				matches.Add (currentObject);
 			}
 		}	
+
+		return markedForDeletion;
+	}
+
+	private bool clearMatches(HashSet<Tile> markedForDeletion){
 			
 		// Start deleting them
 		if (markedForDeletion.Count > 0) {
@@ -173,7 +209,6 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				}
 			}
 
-			// TODO move them 
 			int counter = 0;
 			foreach (Tile tile in grid) {
 				if (tile != null && !markedForDeletion.Contains(tile)) {
@@ -192,40 +227,40 @@ public class GameManager : MonoBehaviour, TileMovementListener
 					}
 					if (movement > 0) {
 						// Already move this tile to his target location in the grid, will be used when checking for matches later.
-
-//						Debug.Log ("will move " + x + "," + y);
 						grid [(int)x, (int)y - movement] = tile;
 						grid [(int)x, (int)y] = null;
 						tile.setTileMovementListener (this);	
 						tilesToMove++;
+						// Start animation, movementFinished callback will be called when it finishes
 						tile.move (movement);
 					}
 
 				}
 
 			}
-//			Debug.Log (String.Format("will move {0} tiles", tilesToMove));
 
-
+			return true;
+		
 		} else {
+			Debug.Log ("checked , no matches");
 			// if there are no matches: we're done - let player play again
+			return false;
 		}
 	}
+
+
+	/**Tile callback*/
 
 	public void movementFinished()
 	{
 		movedTiles++;
 		Debug.Log ("move finished " + movedTiles);
 		if (movedTiles == tilesToMove) {
-//			Debug.Log ("will now check matches again after moving");
 			movedTiles = 0;
 			tilesToMove = 0;
-			checkMatches ();
+			checkAndRemoveMatches (grid);
 		}
 	}
-
-//	private Boolean movesPossible(){
-//	}
 
 	private void checkPossibleMoves()
 	{
@@ -239,7 +274,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	// utils
 	private Tile spawnRandomTile(Vector2 location)
 	{
-		Tile tile = tiles [UnityEngine.Random.Range (0, 4)];
+		Tile tile = tiles [UnityEngine.Random.Range (0, tiles.Length)];
 		return Instantiate (tile, location, Quaternion.identity) as Tile;
 	}
 
