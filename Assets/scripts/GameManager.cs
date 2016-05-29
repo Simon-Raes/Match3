@@ -30,7 +30,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	{
 
 		// columns, rows
-		setupBoard();
+		setupBoard ();
 
 		checkAndRemoveMatches (grid);			
 	}
@@ -41,7 +41,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		checkClick ();
 	}
 
-	private void setupBoard(){
+	private void setupBoard ()
+	{
 
 		// Reserve extra space above where new tiles can be inserted
 		grid = new Tile[boardSize, boardSize * 2];
@@ -60,7 +61,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			Vector2 mousePosition = Camera.main.ScreenToWorldPoint (Input.mousePosition);
 			Collider2D hitCollider = Physics2D.OverlapPoint (mousePosition);
 
-//			Debug.Log ("mouse pos " + mousePosition.x + " y " + mousePosition.y + " ");    
+			int clickedX = (int)hitCollider.transform.position.x;
+			int clickedY = (int)hitCollider.transform.position.y;
 
 
 			if (hitCollider != null) {
@@ -68,31 +70,67 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 				var transform = selectionIndicator.transform.position;
 
+				int indicatorX = (int)transform.x;
+				int indicatorY = (int)transform.y;
+
 				if (transform.x == -1 && transform.y == -1) {
-					transform.x = hitCollider.transform.position.x;
-					transform.y = hitCollider.transform.position.y;  
+					transform.x = (float)clickedX;
+					transform.y = (float)clickedY;  
 
 					selectionIndicator.transform.position = transform;
 
 				} else {
-
-		
-					//todo check if it next to the current selection
-					float xDistance = Math.Abs (transform.x - hitCollider.transform.position.x);
-					float yDistance = Math.Abs (transform.y - hitCollider.transform.position.y);
+					
+					float xDistance = Math.Abs (transform.x - clickedX);
+					float yDistance = Math.Abs (transform.y - clickedY);
 
 					if ((xDistance == 0 && yDistance == 1) || (xDistance == 1 && yDistance == 0)) {
 						transform.x = -1;
 						transform.y = -1;
 
+						Tile[,] checkingGrid = new Tile[boardSize, boardSize * 2];
+						Array.Copy (grid, checkingGrid, boardSize * (boardSize * 2));
 
-						//TODO check validity of move
-						//TODO update checkMatches to accept a grid of items?
-						// That way we can swap the two tiles, run the check and use that new grid if there are matches
-						// and switch back to the old one if there are none
-						// have checkmatches return the list of pendingdeletions
-						// that way you don't have to run checkmatches twice.
-						checkMatches(grid);
+
+						Tile tOne = checkingGrid [indicatorX, indicatorY];
+						Tile tTwo = checkingGrid [clickedX, clickedY];
+					
+
+						Tile temp = tOne;
+						checkingGrid [indicatorX, indicatorY] = tTwo;
+						checkingGrid [clickedX, clickedY] = temp;
+
+
+
+
+
+
+					
+
+						HashSet<Tile> matches = checkMatches (checkingGrid);
+
+						if (matches.Count > 0) {
+							
+							Debug.Log ("moving " + tOne.tag + "from" + tOne.transform.position.x + ", " + tOne.transform.position.y + " to "
+							+ clickedX + ", " + clickedY);
+							var t = tOne.transform.position;
+							t.x = clickedX;
+							t.y = clickedY;
+							tOne.transform.position = t;
+
+							Debug.Log ("moving " + tTwo.tag + "from" + tTwo.transform.position.x + ", " + tTwo.transform.position.y + " to "
+							+ indicatorX + ", " + indicatorY);
+							var tt = tTwo.transform.position;
+							tt.x = indicatorX;
+							tt.y = indicatorY;
+							tTwo.transform.position = tt;
+
+							checkingGrid [clickedX, clickedY] = tOne;
+							checkingGrid [indicatorX, indicatorY] = tTwo;
+
+							grid = checkingGrid;
+							clearMatches (matches);
+						} 
 
 					} else {
 						transform.x = hitCollider.transform.position.x;
@@ -101,17 +139,27 @@ public class GameManager : MonoBehaviour, TileMovementListener
   
 					selectionIndicator.transform.position = transform;
 				}
-
 			}
 		}
 	}
 
-	private void checkAndRemoveMatches(Tile[,] inGrid){
+	/// <summary>
+	/// Checks the grid for any matches and removes them if there are any. 
+	/// New tiles will be added to fill in the empty spaces.
+	/// Grid will be automatically checked for matches once the tiles have moved into their position. 
+	/// </summary>
+	/// <param name="inGrid">The grid to check.</param>
+	private void checkAndRemoveMatches (Tile[,] inGrid)
+	{
 		HashSet<Tile> matches = checkMatches (inGrid);
 		clearMatches (matches);
 	}
 
-
+	/// <summary>
+	/// Checks the grid for matches.
+	/// </summary>
+	/// <returns>The matches found in the grid.</returns>
+	/// <param name="inGrid">The grid to check for matches.</param>
 	private HashSet<Tile> checkMatches (Tile[,] inGrid)
 	{
 		HashSet<Tile> markedForDeletion = new HashSet<Tile> ();
@@ -124,7 +172,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			resetMatches (matches, markedForDeletion);
 
 			for (int y = 0; y < boardSize; y++) {
-
+					
 				Tile currentObject = inGrid [x, y];
 
 				if (matches.Count > 0 && !matches [0].tag.Equals (currentObject.tag)) {
@@ -164,21 +212,14 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		return markedForDeletion;
 	}
 
-	private bool clearMatches(HashSet<Tile> markedForDeletion){
-			
+	private void clearMatches (HashSet<Tile> markedForDeletion)
+	{
 		// Start deleting them
 		if (markedForDeletion.Count > 0) {
-
-			// todo reuse instead of making a new list every time
+		
 			Dictionary<float, int> newTilesForRow = new Dictionary<float,int> ();
 
-//			Debug.Log ("gameobjects: " + grid.Length);
-//			Debug.Log ("marked for deletion: " + markedForDeletion.Count);
-
-
 			foreach (Tile g in markedForDeletion) {
-
-//				Debug.Log ("will delete tile at : " + g.gameObject.transform.position.x +","+g.gameObject.transform.position.y);
 
 				float tileXPosition = g.transform.position.x;
 				int previousValue = 0;
@@ -198,27 +239,26 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				
 
 			// Spawn new tiles to fill the gaps
-			foreach(KeyValuePair<float, int> entry in newTilesForRow)
-			{
+			foreach (KeyValuePair<float, int> entry in newTilesForRow) {
 				for (int i = boardSize; i < boardSize + entry.Value; i++) {
 
 					int x = (int)entry.Key;
 					int y = i;
 
-					grid [x,y] = spawnRandomTile (new Vector2 (x,y));
+					grid [x, y] = spawnRandomTile (new Vector2 (x, y));
 				}
 			}
 
 			int counter = 0;
 			foreach (Tile tile in grid) {
-				if (tile != null && !markedForDeletion.Contains(tile)) {
+				if (tile != null && !markedForDeletion.Contains (tile)) {
 					float x = tile.transform.position.x;
 					float y = tile.transform.position.y;
 
 					int movement = 0;
 
 
-					foreach (Tile deletedTile in markedForDeletion){
+					foreach (Tile deletedTile in markedForDeletion) {
 						if (deletedTile.transform.position.x == x) {
 							if (deletedTile.transform.position.y < y) {
 								movement++;
@@ -226,7 +266,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 						}
 					}
 					if (movement > 0) {
-						// Already move this tile to his target location in the grid, will be used when checking for matches later.
+						// Already save this tile at his target location in the grid, final location will be used when checking for matches later.
 						grid [(int)x, (int)y - movement] = tile;
 						grid [(int)x, (int)y] = null;
 						tile.setTileMovementListener (this);	
@@ -238,20 +278,13 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				}
 
 			}
-
-			return true;
-		
-		} else {
-			Debug.Log ("checked , no matches");
-			// if there are no matches: we're done - let player play again
-			return false;
-		}
+		} 
 	}
 
 
 	/**Tile callback*/
 
-	public void movementFinished()
+	public void movementFinished ()
 	{
 		movedTiles++;
 		Debug.Log ("move finished " + movedTiles);
@@ -262,7 +295,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		}
 	}
 
-	private void checkPossibleMoves()
+	private void checkPossibleMoves ()
 	{
 		// TODO check if there are any moves left
 		// TODO can this already be done above? doubt it 
@@ -272,7 +305,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 
 	// utils
-	private Tile spawnRandomTile(Vector2 location)
+	private Tile spawnRandomTile (Vector2 location)
 	{
 		Tile tile = tiles [UnityEngine.Random.Range (0, tiles.Length)];
 		return Instantiate (tile, location, Quaternion.identity) as Tile;
