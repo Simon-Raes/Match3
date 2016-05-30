@@ -4,7 +4,7 @@ namespace AssemblyCSharp
 {
 	public interface TileMovementListener
 	{
-		void movementFinished();
+		void movementFinished(Tile t);
 	}
 }
 

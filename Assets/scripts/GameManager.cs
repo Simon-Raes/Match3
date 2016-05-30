@@ -77,6 +77,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 					transform.x = (float)clickedX;
 					transform.y = (float)clickedY;  
 
+					Debug.Log ("moved indicator to " + transform);
 					selectionIndicator.transform.position = transform;
 
 				} else {
@@ -101,12 +102,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 						checkingGrid [clickedX, clickedY] = temp;
 
 
-
-
-
-
-					
-
+						// TODO would be nice to have a method that only checks the possible matches for that move
 						HashSet<Tile> matches = checkMatches (checkingGrid);
 
 						if (matches.Count > 0) {
@@ -130,6 +126,20 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 							grid = checkingGrid;
 							clearMatches (matches);
+
+
+
+//							tOne.setTileMovementListener (this);	
+//							tilesToMove++;
+//							// Start animation, movementFinished callback will be called when it finishes
+//							tOne.move (1, 0, 0, 0);
+//
+//							tTwo.setTileMovementListener (this);	
+//							tilesToMove++;
+//							// Start animation, movementFinished callback will be called when it finishes
+//							tTwo.move (0, 0, 1, 0);
+
+
 						} 
 
 					} else {
@@ -233,11 +243,11 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 
 				// TODO delete them with an animation
-
+//				Debug.Log ("soon deleting tile " + g.transform.position.x + "," + g.transform.position.y);
 				Destroy (g.gameObject);
 			}
 				
-
+			List<Tile> newTiles = new List<Tile> ();
 			// Spawn new tiles to fill the gaps
 			foreach (KeyValuePair<float, int> entry in newTilesForRow) {
 				for (int i = boardSize; i < boardSize + entry.Value; i++) {
@@ -246,6 +256,10 @@ public class GameManager : MonoBehaviour, TileMovementListener
 					int y = i;
 
 					grid [x, y] = spawnRandomTile (new Vector2 (x, y));
+
+					// TODO use this later
+//					newTiles.Add(spawnRandomTile (new Vector2 (x, y)));
+
 				}
 			}
 
@@ -258,21 +272,20 @@ public class GameManager : MonoBehaviour, TileMovementListener
 					int movement = 0;
 
 
-					foreach (Tile deletedTile in markedForDeletion) {
-						if (deletedTile.transform.position.x == x) {
-							if (deletedTile.transform.position.y < y) {
-								movement++;
-							}
+					for (int i = (int)y; i >= 0; i--) {
+						
+						if (markedForDeletion.Contains (grid [(int)x, i])) {
+							movement++;
 						}
 					}
+
 					if (movement > 0) {
-						// Already save this tile at his target location in the grid, final location will be used when checking for matches later.
-						grid [(int)x, (int)y - movement] = tile;
+						// Remove it from the grid while it moves
 						grid [(int)x, (int)y] = null;
 						tile.setTileMovementListener (this);	
 						tilesToMove++;
 						// Start animation, movementFinished callback will be called when it finishes
-						tile.move (movement);
+						tile.fall (movement);
 					}
 
 				}
@@ -284,8 +297,10 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 	/**Tile callback*/
 
-	public void movementFinished ()
+	public void movementFinished (Tile t)
 	{
+		// Place it back into the grid at the new position
+		grid [(int)t.transform.position.x, (int)t.transform.position.y] = t;
 		movedTiles++;
 		Debug.Log ("move finished " + movedTiles);
 		if (movedTiles == tilesToMove) {

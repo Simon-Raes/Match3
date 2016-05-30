@@ -25,6 +25,8 @@ public class Tile : MonoBehaviour
 
 	private float rotateTime;
 
+	private float moveSpeed = 2;
+
 
 
 	// Use this for initialization
@@ -34,7 +36,6 @@ public class Tile : MonoBehaviour
 		rotateSpeed = Random.Range (rotateSpeedMin, rotateSpeedMax);
 
 		StartCoroutine ("Rotate");
-
 	}
 
 	public void setTileMovementListener(TileMovementListener listener)
@@ -50,24 +51,41 @@ public class Tile : MonoBehaviour
 
 		if (moving) {
 
-			float distCovered = (Time.time - moveStartTime) * 2;
+			float distCovered = (Time.time - moveStartTime) * moveSpeed;
 			float fracJourney = distCovered / moveDistance;
 			transform.position = Vector3.Lerp (startPosition, targetPosition, fracJourney);
 
 			if (transform.position.y == targetPosition.y) {
 				moving = false;
 
-				listener.movementFinished ();
+				listener.movementFinished (this);
 			}
 		}
 	}
 
-	public void move (int distance)
+	//TODO direction enum
+	public void move (int left, int up, int right, int down)
 	{
 		moving = true;
 
 		startPosition = transform.position;
 		targetPosition = transform.position;
+		targetPosition.x -= left;
+		targetPosition.y += up;
+		targetPosition.x += right;
+		targetPosition.y -= down;
+
+		moveStartTime = Time.time;
+		moveDistance = Vector2.Distance (startPosition, targetPosition);
+	}
+
+	public void fall(int distance)
+	{
+		moving = true;
+
+		startPosition = transform.position;
+		targetPosition = transform.position;
+
 		targetPosition.y -= distance;
 
 		moveStartTime = Time.time;
