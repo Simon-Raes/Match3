@@ -89,36 +89,24 @@ public class GameManager : MonoBehaviour, TileMovementListener
 						transform.x = -1;
 						transform.y = -1;
 
-						// Make a temporary copy of the grid so we can swap tiles and check for matches
-						// TODO remove this, not necessary - just swap in real grid, check, move back if no matches
-						Tile[,] checkingGrid = new Tile[boardSize, boardSize * 2];
-						Array.Copy (grid, checkingGrid, boardSize * (boardSize * 2));
+						Tile tOne = grid [indicatorX, indicatorY];
+						Tile tTwo = grid [clickedX, clickedY];
 
-
-						Tile tOne = checkingGrid [indicatorX, indicatorY];
-						Tile tTwo = checkingGrid [clickedX, clickedY];
-					
-
-						Tile temp = tOne;
-						checkingGrid [indicatorX, indicatorY] = tTwo;
-						checkingGrid [clickedX, clickedY] = temp;
+						grid [indicatorX, indicatorY] = tTwo;
+						grid [clickedX, clickedY] = tOne;
 
 
 						// TODO would be nice to have a method that only checks the possible matches for that move instead of going over the full board
-						HashSet<Tile> matches = checkMatches (checkingGrid);
+						HashSet<Tile> matches = checkMatches (grid);
 
 						if (matches.Count > 0) {
-							
+
+							// Move tiles to their new locations
 
 							float tOneXMovement = tTwo.transform.position.x - tOne.transform.position.x;
 							float tOneYMovement = tTwo.transform.position.y - tOne.transform.position.y;
 
-							float tTwoXMovement = tOne.transform.position.x - tTwo.transform.position.x;
-							float tTwoYMovement = tOne.transform.position.y - tTwo.transform.position.y;
-
-
 							// Remove it from the grid while it moves
-							Debug.Log ("moving " + tOne.tag + " from " + tOne.transform.position.x + ", " + tOne.transform.position.y);
 							grid [(int)tOne.transform.position.x, (int)tOne.transform.position.y] = null;
 							tOne.setTileMovementListener (this);	
 							tilesToMove++;
@@ -126,7 +114,10 @@ public class GameManager : MonoBehaviour, TileMovementListener
 							tOne.move (tOneXMovement, tOneYMovement);
 
 
-							Debug.Log ("moving " + tTwo.tag + " from " + tTwo.transform.position.x + ", " + tTwo.transform.position.y);
+							float tTwoXMovement = tOne.transform.position.x - tTwo.transform.position.x;
+							float tTwoYMovement = tOne.transform.position.y - tTwo.transform.position.y;
+
+							// Remove it from the grid while it moves
 							grid [(int)tTwo.transform.position.x, (int)tTwo.transform.position.y] = null;
 							tTwo.setTileMovementListener (this);	
 							tilesToMove++;
@@ -134,7 +125,11 @@ public class GameManager : MonoBehaviour, TileMovementListener
 							tTwo.move (tTwoXMovement, tTwoYMovement);
 
 
-						} 
+						} else {
+							// No matches, revert to previous locations
+							grid [indicatorX, indicatorY] = tOne;
+							grid [clickedX, clickedY] = tTwo;
+						}
 
 					} else {
 						transform.x = hitCollider.transform.position.x;
