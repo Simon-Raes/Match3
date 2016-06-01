@@ -5,6 +5,7 @@ using AssemblyCSharp;
 public class Tile : MonoBehaviour
 {
 	private bool moving;
+	private bool falling;
 
 	private Vector2 startPosition;
 	private Vector2 targetPosition;
@@ -25,8 +26,10 @@ public class Tile : MonoBehaviour
 
 	private float rotateTime;
 
-	private float moveSpeed = 2;
+	private const float SPEED_FALL = 2;
+	private const float SPEED_SWAP = 5;
 
+	private float speed = 1;
 
 
 	// Use this for initialization
@@ -35,7 +38,7 @@ public class Tile : MonoBehaviour
 		rotateAngle = Random.Range (rotateRangeMin, rotateRangeMax);
 		rotateSpeed = Random.Range (rotateSpeedMin, rotateSpeedMax);
 
-		StartCoroutine ("Rotate");
+		StartCoroutine ("AnimateIdle");
 	}
 
 	public void setTileMovementListener(TileMovementListener listener)
@@ -46,54 +49,51 @@ public class Tile : MonoBehaviour
 	// Update is called once per frame
 	void Update ()
 	{
-
-
-
+		// TODO replace with coroutine
 		if (moving) {
 
-			float distCovered = (Time.time - moveStartTime) * moveSpeed;
+			float distCovered = (Time.time - moveStartTime) * speed;
 			float fracJourney = distCovered / moveDistance;
 			transform.position = Vector3.Lerp (startPosition, targetPosition, fracJourney);
 
-			if (transform.position.y == targetPosition.y) {
+			if (transform.position.y == targetPosition.y && transform.position.x == targetPosition.x) {
 				moving = false;
 
 				listener.movementFinished (this);
 			}
 		}
 	}
-
-	//TODO direction enum
-	public void move (int left, int up, int right, int down)
+		
+	public void move (float x, float y)
 	{
-		moving = true;
+		speed = SPEED_SWAP;
 
-		startPosition = transform.position;
-		targetPosition = transform.position;
-		targetPosition.x -= left;
-		targetPosition.y += up;
-		targetPosition.x += right;
-		targetPosition.y -= down;
-
-		moveStartTime = Time.time;
-		moveDistance = Vector2.Distance (startPosition, targetPosition);
+		moveInternal (x, y);
 	}
 
 	public void fall(int distance)
 	{
+		speed = SPEED_FALL;
+
+		moveInternal (0, -distance);
+	}
+
+	private void moveInternal(float x, float y)
+	{
 		moving = true;
 
 		startPosition = transform.position;
 		targetPosition = transform.position;
 
-		targetPosition.y -= distance;
+		targetPosition.x += x;
+		targetPosition.y += y;
 
 		moveStartTime = Time.time;
 		moveDistance = Vector2.Distance (startPosition, targetPosition);
 	}
 
 
-	IEnumerator Rotate() {
+	IEnumerator AnimateIdle() {
 		while (true) {
 
 			rotateTime = rotateTime + Time.deltaTime;
@@ -103,7 +103,6 @@ public class Tile : MonoBehaviour
 			transform.localRotation = Quaternion.Euler( new Vector3(0, 0, 1) * degrees * rotateAngle);
 
 			yield return null;
-
 		}
 	}
 }

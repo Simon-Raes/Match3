@@ -89,6 +89,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 						transform.x = -1;
 						transform.y = -1;
 
+						// Make a temporary copy of the grid so we can swap tiles and check for matches
+						// TODO remove this, not necessary - just swap in real grid, check, move back if no matches
 						Tile[,] checkingGrid = new Tile[boardSize, boardSize * 2];
 						Array.Copy (grid, checkingGrid, boardSize * (boardSize * 2));
 
@@ -102,42 +104,34 @@ public class GameManager : MonoBehaviour, TileMovementListener
 						checkingGrid [clickedX, clickedY] = temp;
 
 
-						// TODO would be nice to have a method that only checks the possible matches for that move
+						// TODO would be nice to have a method that only checks the possible matches for that move instead of going over the full board
 						HashSet<Tile> matches = checkMatches (checkingGrid);
 
 						if (matches.Count > 0) {
 							
-							Debug.Log ("moving " + tOne.tag + "from" + tOne.transform.position.x + ", " + tOne.transform.position.y + " to "
-							+ clickedX + ", " + clickedY);
-							var t = tOne.transform.position;
-							t.x = clickedX;
-							t.y = clickedY;
-							tOne.transform.position = t;
 
-							Debug.Log ("moving " + tTwo.tag + "from" + tTwo.transform.position.x + ", " + tTwo.transform.position.y + " to "
-							+ indicatorX + ", " + indicatorY);
-							var tt = tTwo.transform.position;
-							tt.x = indicatorX;
-							tt.y = indicatorY;
-							tTwo.transform.position = tt;
+							float tOneXMovement = tTwo.transform.position.x - tOne.transform.position.x;
+							float tOneYMovement = tTwo.transform.position.y - tOne.transform.position.y;
 
-							checkingGrid [clickedX, clickedY] = tOne;
-							checkingGrid [indicatorX, indicatorY] = tTwo;
-
-							grid = checkingGrid;
-							clearMatches (matches);
+							float tTwoXMovement = tOne.transform.position.x - tTwo.transform.position.x;
+							float tTwoYMovement = tOne.transform.position.y - tTwo.transform.position.y;
 
 
+							// Remove it from the grid while it moves
+							Debug.Log ("moving " + tOne.tag + " from " + tOne.transform.position.x + ", " + tOne.transform.position.y);
+							grid [(int)tOne.transform.position.x, (int)tOne.transform.position.y] = null;
+							tOne.setTileMovementListener (this);	
+							tilesToMove++;
+							// Start animation, movementFinished callback will be called when it finishes
+							tOne.move (tOneXMovement, tOneYMovement);
 
-//							tOne.setTileMovementListener (this);	
-//							tilesToMove++;
-//							// Start animation, movementFinished callback will be called when it finishes
-//							tOne.move (1, 0, 0, 0);
-//
-//							tTwo.setTileMovementListener (this);	
-//							tilesToMove++;
-//							// Start animation, movementFinished callback will be called when it finishes
-//							tTwo.move (0, 0, 1, 0);
+
+							Debug.Log ("moving " + tTwo.tag + " from " + tTwo.transform.position.x + ", " + tTwo.transform.position.y);
+							grid [(int)tTwo.transform.position.x, (int)tTwo.transform.position.y] = null;
+							tTwo.setTileMovementListener (this);	
+							tilesToMove++;
+							// Start animation, movementFinished callback will be called when it finishes
+							tTwo.move (tTwoXMovement, tTwoYMovement);
 
 
 						} 
@@ -271,7 +265,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 					int movement = 0;
 
-
+					// Check how far this tile has to move down (could be 0)
 					for (int i = (int)y; i >= 0; i--) {
 						
 						if (markedForDeletion.Contains (grid [(int)x, i])) {
@@ -303,6 +297,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		grid [(int)t.transform.position.x, (int)t.transform.position.y] = t;
 		movedTiles++;
 		Debug.Log ("move finished " + movedTiles);
+		Debug.Log (t.tag + " now at " + t.transform.position.x + "," + t.transform.position.y);
 		if (movedTiles == tilesToMove) {
 			movedTiles = 0;
 			tilesToMove = 0;
