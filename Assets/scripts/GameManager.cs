@@ -16,11 +16,11 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	private GameObject selectionIndicator;
 
 	[SerializeField]
-	private Tile[] tiles;
+	private Tile[] tiles; // The array of possible faces that can be spawned
 
 	private Tile[,] grid;
 
-	private Vector2 selectionLocation = new Vector2 (-1, -1);
+//	private Vector2 selectionLocation = new Vector2 (-1, -1);
 
 	private int tilesToMove = 0;
 	private int movedTiles = 0;
@@ -43,9 +43,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 	private void setupBoard ()
 	{
-
 		// Reserve extra space above where new tiles can be inserted
-		grid = new Tile[boardSize, boardSize * 2];
+		grid = new Tile[boardSize, boardSize ];
 
 		for (int x = 0; x < boardSize; x++) {
 			for (int y = 0; y < boardSize; y++) {	
@@ -244,44 +243,51 @@ public class GameManager : MonoBehaviour, TileMovementListener
 					int x = (int)entry.Key;
 					int y = i;
 
-					grid [x, y] = spawnRandomTile (new Vector2 (x, y));
-
-					// TODO use this later
-//					newTiles.Add(spawnRandomTile (new Vector2 (x, y)));
+					newTiles.Add(spawnRandomTile (new Vector2 (x, y)));
 
 				}
 			}
 
-			int counter = 0;
 			foreach (Tile tile in grid) {
-				if (tile != null && !markedForDeletion.Contains (tile)) {
-					float x = tile.transform.position.x;
-					float y = tile.transform.position.y;
+				initTileMovement (tile, markedForDeletion);
+			}
 
-					int movement = 0;
-
-					// Check how far this tile has to move down (could be 0)
-					for (int i = (int)y; i >= 0; i--) {
-						
-						if (markedForDeletion.Contains (grid [(int)x, i])) {
-							movement++;
-						}
-					}
-
-					if (movement > 0) {
-						// Remove it from the grid while it moves
-						grid [(int)x, (int)y] = null;
-						tile.setTileMovementListener (this);	
-						tilesToMove++;
-						// Start animation, movementFinished callback will be called when it finishes
-						tile.fall (movement);
-					}
-
-				}
-
+			// Also do this for the newly spawned tiles
+			foreach (Tile tile in newTiles) {
+				initTileMovement (tile, markedForDeletion);
 			}
 		} 
 	}
+
+	private void initTileMovement(Tile tile, HashSet<Tile> markedForDeletion){
+		if (tile != null && !markedForDeletion.Contains (tile)) {
+			float x = tile.transform.position.x;
+			float y = tile.transform.position.y;
+
+			int movement = 0;
+
+			// Check how far this tile has to move down (could be 0)
+			int maxHeight = Math.Min((int)y, boardSize - 1);
+			for (int i = maxHeight; i >= 0; i--) {
+
+				if (markedForDeletion.Contains (grid [(int)x, i])) {
+					movement++;
+				}
+			}
+
+			if (movement > 0) {
+				// Remove it from the grid while it moves (if it is part of the grid, newTiles are not)
+				if (x < boardSize && y < boardSize) {
+					grid [(int)x, (int)y] = null;
+				}
+				tile.setTileMovementListener (this);	
+				tilesToMove++;
+				// Start animation, movementFinished callback will be called when it finishes
+				tile.fall (movement);
+			}
+		}
+	}
+		
 
 
 	/**Tile callback*/
