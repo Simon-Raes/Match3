@@ -16,26 +16,20 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	private GameObject selectionIndicator;
 
 	[SerializeField]
-	private Tile[] tiles; // The array of possible faces that can be spawned
+	private Tile[] tiles;
+	// The array of possible faces that can be spawned
 
 	private Tile[,] grid;
-
-//	private Vector2 selectionLocation = new Vector2 (-1, -1);
 
 	private int tilesToMove = 0;
 	private int movedTiles = 0;
 
-	// Use this for initialization
 	void Start ()
 	{
-
-		// columns, rows
 		setupBoard ();
-
 		checkAndRemoveMatches (grid);			
 	}
-	
-	// Update is called once per frame
+
 	void Update ()
 	{
 		checkClick ();
@@ -43,8 +37,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 	private void setupBoard ()
 	{
-		// Reserve extra space above where new tiles can be inserted
-		grid = new Tile[boardSize, boardSize ];
+		grid = new Tile[boardSize, boardSize];
 
 		for (int x = 0; x < boardSize; x++) {
 			for (int y = 0; y < boardSize; y++) {	
@@ -60,33 +53,30 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			Vector2 mousePosition = Camera.main.ScreenToWorldPoint (Input.mousePosition);
 			Collider2D hitCollider = Physics2D.OverlapPoint (mousePosition);
 
-			int clickedX = (int)hitCollider.transform.position.x;
-			int clickedY = (int)hitCollider.transform.position.y;
-
-
 			if (hitCollider != null) {
 
+				int clickedX = (int)hitCollider.transform.position.x;
+				int clickedY = (int)hitCollider.transform.position.y;
 
-				var transform = selectionIndicator.transform.position;
+				var indicatorPosition = selectionIndicator.transform.position;
 
-				int indicatorX = (int)transform.x;
-				int indicatorY = (int)transform.y;
+				int indicatorX = (int)indicatorPosition.x;
+				int indicatorY = (int)indicatorPosition.y;
 
-				if (transform.x == -1 && transform.y == -1) {
-					transform.x = (float)clickedX;
-					transform.y = (float)clickedY;  
+				if (indicatorPosition.x == -1 && indicatorPosition.y == -1) {
+					indicatorPosition.x = (float)clickedX;
+					indicatorPosition.y = (float)clickedY;  
 
-					Debug.Log ("moved indicator to " + transform);
-					selectionIndicator.transform.position = transform;
+					selectionIndicator.transform.position = indicatorPosition;
 
 				} else {
 					
-					float xDistance = Math.Abs (transform.x - clickedX);
-					float yDistance = Math.Abs (transform.y - clickedY);
+					float xDistance = Math.Abs (indicatorPosition.x - clickedX);
+					float yDistance = Math.Abs (indicatorPosition.y - clickedY);
 
 					if ((xDistance == 0 && yDistance == 1) || (xDistance == 1 && yDistance == 0)) {
-						transform.x = -1;
-						transform.y = -1;
+						indicatorPosition.x = -1;
+						indicatorPosition.y = -1;
 
 						Tile tOne = grid [indicatorX, indicatorY];
 						Tile tTwo = grid [clickedX, clickedY];
@@ -104,25 +94,12 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 							float tOneXMovement = tTwo.transform.position.x - tOne.transform.position.x;
 							float tOneYMovement = tTwo.transform.position.y - tOne.transform.position.y;
-
-							// Remove it from the grid while it moves
-							grid [(int)tOne.transform.position.x, (int)tOne.transform.position.y] = null;
-							tOne.setTileMovementListener (this);	
-							tilesToMove++;
-							// Start animation, movementFinished callback will be called when it finishes
-							tOne.move (tOneXMovement, tOneYMovement);
-
+							moveTile(tOne, tOneXMovement, tOneYMovement);
 
 							float tTwoXMovement = tOne.transform.position.x - tTwo.transform.position.x;
 							float tTwoYMovement = tOne.transform.position.y - tTwo.transform.position.y;
-
-							// Remove it from the grid while it moves
-							grid [(int)tTwo.transform.position.x, (int)tTwo.transform.position.y] = null;
-							tTwo.setTileMovementListener (this);	
-							tilesToMove++;
-							// Start animation, movementFinished callback will be called when it finishes
-							tTwo.move (tTwoXMovement, tTwoYMovement);
-
+							moveTile(tTwo, tTwoXMovement, tTwoYMovement);
+					
 
 						} else {
 							// No matches, revert to previous locations
@@ -131,14 +108,29 @@ public class GameManager : MonoBehaviour, TileMovementListener
 						}
 
 					} else {
-						transform.x = hitCollider.transform.position.x;
-						transform.y = hitCollider.transform.position.y;  
+						indicatorPosition.x = hitCollider.transform.position.x;
+						indicatorPosition.y = hitCollider.transform.position.y;  
 					}
   
-					selectionIndicator.transform.position = transform;
+					selectionIndicator.transform.position = indicatorPosition;
 				}
 			}
 		}
+	}
+
+	/// <summary>
+	/// Moves a tile the desired distance. The tile will be removed from the game grid while moving.
+	/// movementFinished will be called once the movement finishes and will add the tile back to the grid at its new location.
+	/// </summary>
+	/// <param name="tile">Th tile to move.</param>
+	/// <param name="xMovement">X movement.</param>
+	/// <param name="yMovement">Y movement.</param>
+	private void moveTile(Tile tile, float xMovement, float yMovement){
+		// Remove it from the grid while it moves
+		grid [(int)tile.transform.position.x, (int)tile.transform.position.y] = null;
+		tile.setTileMovementListener (this);	
+		tilesToMove++;
+		tile.move (xMovement, yMovement);
 	}
 
 	/// <summary>
@@ -243,7 +235,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 					int x = (int)entry.Key;
 					int y = i;
 
-					newTiles.Add(spawnRandomTile (new Vector2 (x, y)));
+					newTiles.Add (spawnRandomTile (new Vector2 (x, y)));
 
 				}
 			}
@@ -259,7 +251,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		} 
 	}
 
-	private void initTileMovement(Tile tile, HashSet<Tile> markedForDeletion){
+	private void initTileMovement (Tile tile, HashSet<Tile> markedForDeletion)
+	{
 		if (tile != null && !markedForDeletion.Contains (tile)) {
 			float x = tile.transform.position.x;
 			float y = tile.transform.position.y;
@@ -267,7 +260,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			int movement = 0;
 
 			// Check how far this tile has to move down (could be 0)
-			int maxHeight = Math.Min((int)y, boardSize - 1);
+			int maxHeight = Math.Min ((int)y, boardSize - 1);
 			for (int i = maxHeight; i >= 0; i--) {
 
 				if (markedForDeletion.Contains (grid [(int)x, i])) {
@@ -287,7 +280,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			}
 		}
 	}
-		
+
 
 
 	/**Tile callback*/
