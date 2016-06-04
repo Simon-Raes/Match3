@@ -24,6 +24,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	private int tilesToMove = 0;
 	private int movedTiles = 0;
 
+	private Dictionary<Tile, Int16> pendingMovements = new Dictionary<Tile, Int16>();
+
 	void Start ()
 	{
 		setupBoard ();
@@ -86,7 +88,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 
 						// TODO would be nice to have a method that only checks the possible matches for that move instead of going over the full board
-						HashSet<Tile> matches = checkMatches (grid);
+						HashSet<Tile> matches = findMatches (grid);
 
 						if (matches.Count > 0) {
 
@@ -141,7 +143,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	/// <param name="inGrid">The grid to check.</param>
 	private void checkAndRemoveMatches (Tile[,] inGrid)
 	{
-		HashSet<Tile> matches = checkMatches (inGrid);
+		HashSet<Tile> matches = findMatches (inGrid);
 		clearMatches (matches);
 	}
 
@@ -150,7 +152,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	/// </summary>
 	/// <returns>The matches found in the grid.</returns>
 	/// <param name="inGrid">The grid to check for matches.</param>
-	private HashSet<Tile> checkMatches (Tile[,] inGrid)
+	private HashSet<Tile> findMatches (Tile[,] inGrid)
 	{
 		HashSet<Tile> markedForDeletion = new HashSet<Tile> ();
 		List<Tile> matches = new List<Tile> ();
@@ -222,9 +224,9 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				}
 
 
-				// TODO delete them with an animation
-//				Debug.Log ("soon deleting tile " + g.transform.position.x + "," + g.transform.position.y);
-				Destroy (g.gameObject);
+				g.setTileMovementListener (this);	
+				tilesToMove++;
+				g.delete();
 			}
 				
 			List<Tile> newTiles = new List<Tile> ();
@@ -239,7 +241,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 				}
 			}
-
+				
 			foreach (Tile tile in grid) {
 				initTileMovement (tile, markedForDeletion);
 			}
@@ -248,8 +250,15 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			foreach (Tile tile in newTiles) {
 				initTileMovement (tile, markedForDeletion);
 			}
+
+			tilesToMove = markedForDeletion.Count;
+
+
+
 		} 
 	}
+
+
 
 	private void initTileMovement (Tile tile, HashSet<Tile> markedForDeletion)
 	{
@@ -257,7 +266,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			float x = tile.transform.position.x;
 			float y = tile.transform.position.y;
 
-			int movement = 0;
+			Int16 movement = 0;
 
 			// Check how far this tile has to move down (could be 0)
 			int maxHeight = Math.Min ((int)y, boardSize - 1);
@@ -273,25 +282,46 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				if (x < boardSize && y < boardSize) {
 					grid [(int)x, (int)y] = null;
 				}
-				tile.setTileMovementListener (this);	
-				tilesToMove++;
-				// Start animation, movementFinished callback will be called when it finishes
-				tile.fall (movement);
+				tile.setTileMovementListener (this);
+				Debug.Log ("added tile " + tile.transform.position.x + "," + tile.transform.position.y);
+				pendingMovements.Add (tile, movement);		
 			}
+		}
+	}
+
+	public void deletionFinished(){
+		movedTiles++;
+
+		Debug.Log ("deletions: " + movedTiles + " / " + tilesToMove);
+
+		if (movedTiles == tilesToMove) {
+
+			Debug.Log ("cleared pendingMovements");
+
+			movedTiles = 0;
+			tilesToMove = pendingMovements.Count;
+
+			foreach (KeyValuePair<Tile, Int16> pair in pendingMovements) {
+				pair.Key.fall (pair.Value);
+			}
+
+			pendingMovements.Clear ();
 		}
 	}
 
 
 
-	/**Tile callback*/
-
-	public void movementFinished (Tile t)
+	/// <summary>
+	/// Callback when a tile has finished moving to its target position.
+	/// </summary>
+	/// <param name="tile">The tile that has finished moving. Will be at its target position. </param>
+	public void movementFinished (Tile tile)
 	{
 		// Place it back into the grid at the new position
-		grid [(int)t.transform.position.x, (int)t.transform.position.y] = t;
+		grid [(int)tile.transform.position.x, (int)tile.transform.position.y] = tile;
 		movedTiles++;
-		Debug.Log ("move finished " + movedTiles);
-		Debug.Log (t.tag + " now at " + t.transform.position.x + "," + t.transform.position.y);
+		Debug.Log ("moves " + movedTiles + "/" + tilesToMove);
+//		Debug.Log (tile.tag + " now at " + tile.transform.position.x + "," + tile.transform.position.y);
 		if (movedTiles == tilesToMove) {
 			movedTiles = 0;
 			tilesToMove = 0;
@@ -316,10 +346,13 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	}
 
 
-	/*
-	* Clears the list of matches being checked right now. If there were enough for a match, they will be added to the list of
-	* pending deletions.
-	*/
+
+	/// <summary>
+	/// Clears the list of matches being checked right now. If there were enough for a match, they will be added to the list of
+	/// pending deletions.
+	/// </summary>
+	/// <param name="checking">Checking.</param>
+	/// <param name="markedForDeletion">Marked for deletion.</param>
 	private void resetMatches (List<Tile> checking, HashSet<Tile> markedForDeletion)
 	{
 		if (checking.Count >= minTilesForMatch) {

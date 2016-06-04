@@ -26,11 +26,12 @@ public class Tile : MonoBehaviour
 
 	private float rotateTime;
 
-	private const float SPEED_FALL = 2;
+	private const float SPEED_FALL = 5.5f;
 	private const float SPEED_SWAP = 5;
 
 	private float speed = 1;
 
+	private const float DELETE_DURATION = .35f;
 
 	// Use this for initialization
 	void Start ()
@@ -49,7 +50,7 @@ public class Tile : MonoBehaviour
 	// Update is called once per frame
 	void Update ()
 	{
-		// TODO replace with coroutine
+		// TODO replace with coroutine?
 		if (moving) {
 
 			float distCovered = (Time.time - moveStartTime) * speed;
@@ -62,6 +63,15 @@ public class Tile : MonoBehaviour
 				listener.movementFinished (this);
 			}
 		}
+	}
+
+	/// <summary>
+	/// Plays the match animation and deletes the gameObject.
+	/// </summary>
+	public void delete()
+	{
+		StopCoroutine ("AnimateIdle");
+		StartCoroutine (AnimateDeletion());
 	}
 		
 	public void move (float x, float y)
@@ -94,6 +104,7 @@ public class Tile : MonoBehaviour
 
 
 	IEnumerator AnimateIdle() {
+
 		while (true) {
 
 			rotateTime = rotateTime + Time.deltaTime;
@@ -104,5 +115,35 @@ public class Tile : MonoBehaviour
 
 			yield return null;
 		}
+	}
+
+	// TODO proper animation with some scaling and alpha and full rotation
+	IEnumerator AnimateDeletion() {
+
+		float remainingTime = DELETE_DURATION;
+		float rotateSpeed;
+		float startScale = transform.localScale.x;
+		float scale = 1;
+
+		while (remainingTime > 0) {
+
+//			rotateSpeed = 2000 * ((DELETE_DURATION - remainingTime) / DELETE_DURATION);
+
+			remainingTime -= Time.deltaTime;
+
+			scale = (remainingTime / DELETE_DURATION) * startScale;
+
+			transform.localScale = new Vector2(scale, scale);
+
+			transform.Rotate (Vector3.forward * -1000 * Time.deltaTime);
+
+			yield return null;
+		}
+			
+		Destroy (gameObject);
+
+		listener.deletionFinished ();
+
+		yield return null;
 	}
 }
