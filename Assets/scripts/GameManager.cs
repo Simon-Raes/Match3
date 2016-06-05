@@ -185,9 +185,6 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		for (int x = 0; x < boardSize; x++) {
 
 			// Checking a new column, clear the list of matching tiles
-			if (matches.Count >= minTilesForMatch) {
-				Debug.Log ("reset 1");
-			}
 			resetMatches (matches, markedForDeletion, updateScore);
 
 			for (int y = 0; y < boardSize; y++) {
@@ -197,9 +194,6 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				if (matches.Count > 0 && !matches [0].tag.Equals (currentObject.tag)) {
 
 					// Tile is different from those in the current list of matches, reset
-					if (matches.Count >= minTilesForMatch) {
-						Debug.Log ("reset 2");
-					}
 					resetMatches (matches, markedForDeletion, updateScore);
 				}
 
@@ -208,9 +202,6 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		}
 
 		// Done checking columns, reset
-		if (matches.Count >= minTilesForMatch) {
-			Debug.Log ("reset 3");
-		}
 		resetMatches (matches, markedForDeletion, updateScore);
 
 
@@ -218,9 +209,6 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		for (int y = 0; y < boardSize; y++) {
 
 			// Checking a new column, clear the list of matching tiles
-			if (matches.Count >= minTilesForMatch) {
-				Debug.Log ("reset 4");
-			}
 			resetMatches (matches, markedForDeletion, updateScore);
 
 			for (int x = 0; x < boardSize; x++) {
@@ -230,15 +218,16 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				if (matches.Count > 0 && !matches [0].tag.Equals (currentObject.tag)) {
 
 					// Tile is different from those in the current list of matches, reset
-					if (matches.Count >= minTilesForMatch) {
-						Debug.Log ("reset 5");
-					}
 					resetMatches (matches, markedForDeletion, updateScore);
 				}
 
 				matches.Add (currentObject);
 			}
 		}	
+
+		// Check again, last tiles in top row won't get cleared otherwise
+		resetMatches (matches, markedForDeletion, updateScore);
+
 
 		return markedForDeletion;
 	}
@@ -291,9 +280,6 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			}
 
 			tilesToMove = markedForDeletion.Count;
-
-
-
 		} 
 	}
 
