@@ -5,26 +5,17 @@ using AssemblyCSharp;
 public class Tile : MonoBehaviour
 {
 	private bool moving;
-	private bool falling;
-
-	private Vector2 startPosition;
-	private Vector2 targetPosition;
-
-	private float moveDistance;
-	private float moveStartTime;
 
 	private TileMovementListener listener;
 
-
-	private float rotateRangeMin = 5;
-	private float rotateRangeMax = 7;
+	private const float ROTATE_RANGE_MIN = 5;
+	private const float ROTATE_RANGE_MAX = 7;
 	private float rotateAngle;
 
-	private float rotateSpeedMin = 10;
-	private float rotateSpeedMax = 12;
+	private const float ROTATE_SPEED_MIN = 10;
+	private const float ROTATE_SPEED_MAX = 12;
 	private float rotateSpeed;
 
-	private float rotateTime;
 
 	private const float SPEED_FALL = 5.5f;
 	private const float SPEED_SWAP = 5;
@@ -33,93 +24,99 @@ public class Tile : MonoBehaviour
 
 	private const float DELETE_DURATION = .35f;
 
-	// Use this for initialization
 	void Start ()
 	{
-		rotateAngle = Random.Range (rotateRangeMin, rotateRangeMax);
-		rotateSpeed = Random.Range (rotateSpeedMin, rotateSpeedMax);
+		rotateAngle = Random.Range (ROTATE_RANGE_MIN, ROTATE_RANGE_MAX);
+		rotateSpeed = Random.Range (ROTATE_SPEED_MIN, ROTATE_SPEED_MAX);
 
 		StartCoroutine ("AnimateIdle");
 	}
 
-	public void setTileMovementListener(TileMovementListener listener)
+	public void setTileMovementListener (TileMovementListener listener)
 	{
 		this.listener = listener;
 	}
 	
-	// Update is called once per frame
 	void Update ()
 	{
-		// TODO replace with coroutine?
-		if (moving) {
-
-			float distCovered = (Time.time - moveStartTime) * speed;
-			float fracJourney = distCovered / moveDistance;
-			transform.position = Vector3.Lerp (startPosition, targetPosition, fracJourney);
-
-			if (transform.position.y == targetPosition.y && transform.position.x == targetPosition.x) {
-				moving = false;
-
-				listener.movementFinished (this);
-			}
-		}
+		
 	}
 
 	/// <summary>
 	/// Plays the match animation and deletes the gameObject.
 	/// </summary>
-	public void delete()
+	public void delete ()
 	{
 		StopCoroutine ("AnimateIdle");
-		StartCoroutine (AnimateDeletion());
+		StartCoroutine (AnimateDeletion ());
 	}
-		
+
 	public void move (float x, float y)
 	{
 		speed = SPEED_SWAP;
 
-		moveInternal (x, y);
+		StartCoroutine (AnimateMovement (x, y));
 	}
 
-	public void fall(int distance)
+	public void fall (int distance)
 	{
 		speed = SPEED_FALL;
 
-		moveInternal (0, -distance);
+		StartCoroutine (AnimateMovement (0, -distance));
 	}
 
-	private void moveInternal(float x, float y)
+	/// <summary>
+	/// Can I get a head wobble?
+	/// </summary>
+	IEnumerator AnimateIdle ()
 	{
-		moving = true;
-
-		startPosition = transform.position;
-		targetPosition = transform.position;
-
-		targetPosition.x += x;
-		targetPosition.y += y;
-
-		moveStartTime = Time.time;
-		moveDistance = Vector2.Distance (startPosition, targetPosition);
-	}
-
-
-	IEnumerator AnimateIdle() {
+		float rotateTime = 0;
 
 		while (true) {
-
 			rotateTime = rotateTime + Time.deltaTime;
 
-			float degrees = Mathf.Sin(rotateTime * rotateSpeed);
+			float degrees = Mathf.Sin (rotateTime * rotateSpeed);
 		
-			transform.localRotation = Quaternion.Euler( new Vector3(0, 0, 1) * degrees * rotateAngle);
+			transform.localRotation = Quaternion.Euler (new Vector3 (0, 0, 1) * degrees * rotateAngle);
 
 			yield return null;
 		}
 	}
 
-	// TODO proper animation with some scaling and alpha and full rotation
-	IEnumerator AnimateDeletion() {
+	/// <summary>
+	/// Moves the tile the desired x and y distance.
+	/// </summary>
+	/// <param name="x">The x distance to move.</param>
+	/// <param name="y">The y distance to move.</param>
+	IEnumerator AnimateMovement (float x, float y)
+	{
+		Vector2 startPosition = transform.position;
+		Vector2 targetPosition = transform.position;
 
+		targetPosition.x += x;
+		targetPosition.y += y;
+
+		float moveStartTime = Time.time;
+		float moveDistance = Vector2.Distance (startPosition, targetPosition);
+
+		while (transform.position.y != targetPosition.y || transform.position.x != targetPosition.x) {
+			float distCovered = (Time.time - moveStartTime) * speed;
+			float fracJourney = distCovered / moveDistance;
+			transform.position = Vector3.Lerp (startPosition, targetPosition, fracJourney);
+
+			yield return null;
+		}
+			
+		listener.movementFinished (this);
+
+		yield return null;
+	}
+
+	/// <summary>
+	/// Also actually deletes the gameObject.
+	/// </summary>
+	IEnumerator AnimateDeletion ()
+	{
 		float remainingTime = DELETE_DURATION;
 		float rotateSpeed;
 		float startScale = transform.localScale.x;
@@ -127,13 +124,11 @@ public class Tile : MonoBehaviour
 
 		while (remainingTime > 0) {
 
-//			rotateSpeed = 2000 * ((DELETE_DURATION - remainingTime) / DELETE_DURATION);
-
 			remainingTime -= Time.deltaTime;
 
 			scale = (remainingTime / DELETE_DURATION) * startScale;
 
-			transform.localScale = new Vector2(scale, scale);
+			transform.localScale = new Vector2 (scale, scale);
 
 			transform.Rotate (Vector3.forward * -1000 * Time.deltaTime);
 

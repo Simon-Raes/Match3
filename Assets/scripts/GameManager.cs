@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 using AssemblyCSharp;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour, TileMovementListener
 {
@@ -26,10 +27,14 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 	private Dictionary<Tile, Int16> pendingMovements = new Dictionary<Tile, Int16>();
 
+	private Text textViewScore;
+
 	void Start ()
 	{
 		setupBoard ();
-		checkAndRemoveMatches (grid);			
+		checkAndRemoveMatches (grid);	
+
+		textViewScore = GameObject.Find ("TextViewScore").GetComponent<Text> ();
 	}
 
 	void Update ()
