@@ -24,7 +24,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 	private Tile[,] grid;
 
-	private int score;
+	private int score = 0;
+	private int combo = 1;
 
 	private int tilesToMove = 0;
 	private int movedTiles = 0;
@@ -32,10 +33,14 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	private Dictionary<Tile, Int16> pendingMovements = new Dictionary<Tile, Int16> ();
 
 	private Text textViewScore;
+	private Text textViewCombo;
 
 	void Awake ()
 	{
 		textViewScore = GameObject.Find ("TextViewScore").GetComponent<Text> ();
+		textViewScore.text = "Score: " + score;
+		textViewCombo = GameObject.Find ("TextViewCombo").GetComponent<Text> ();
+		textViewCombo.text = combo + "x combo";
 	}
 
 	void Start ()
@@ -104,6 +109,10 @@ public class GameManager : MonoBehaviour, TileMovementListener
 						HashSet<Tile> matches = findMatches (grid, false);
 
 						if (matches.Count > 0) {
+
+
+							// Reset combo for the new chain
+							combo = 1;
 
 							// Move tiles to their new locations
 
@@ -390,10 +399,13 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			markedForDeletion.UnionWith (checking);
 
 			if (updateScore) {
-				Debug.Log ("clearing " + checking.Count + " matched tiles.");
-				score += 100 * (Int32)Math.Pow (checking.Count, 2);
+				
+				score += (100 * (Int32)Math.Pow (checking.Count, 2)) * combo;
 				Debug.Log ("score is " + score);
-				textViewScore.text = score.ToString();
+				textViewScore.text =  "Score: " + score.ToString();
+
+				textViewCombo.text = combo + "x combo";
+				combo++;
 			}
 		}
 
