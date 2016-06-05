@@ -20,21 +20,28 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	private Tile[] tiles;
 	// The array of possible faces that can be spawned
 
+
+
 	private Tile[,] grid;
+
+	private int score;
 
 	private int tilesToMove = 0;
 	private int movedTiles = 0;
 
-	private Dictionary<Tile, Int16> pendingMovements = new Dictionary<Tile, Int16>();
+	private Dictionary<Tile, Int16> pendingMovements = new Dictionary<Tile, Int16> ();
 
 	private Text textViewScore;
+
+	void Awake ()
+	{
+		textViewScore = GameObject.Find ("TextViewScore").GetComponent<Text> ();
+	}
 
 	void Start ()
 	{
 		setupBoard ();
 		checkAndRemoveMatches (grid);	
-
-		textViewScore = GameObject.Find ("TextViewScore").GetComponent<Text> ();
 	}
 
 	void Update ()
@@ -93,7 +100,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 
 						// TODO would be nice to have a method that only checks the possible matches for that move instead of going over the full board
-						HashSet<Tile> matches = findMatches (grid);
+						// then we can also get rid of this ugly updateScore boolean
+						HashSet<Tile> matches = findMatches (grid, false);
 
 						if (matches.Count > 0) {
 
@@ -101,11 +109,11 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 							float tOneXMovement = tTwo.transform.position.x - tOne.transform.position.x;
 							float tOneYMovement = tTwo.transform.position.y - tOne.transform.position.y;
-							moveTile(tOne, tOneXMovement, tOneYMovement);
+							moveTile (tOne, tOneXMovement, tOneYMovement);
 
 							float tTwoXMovement = tOne.transform.position.x - tTwo.transform.position.x;
 							float tTwoYMovement = tOne.transform.position.y - tTwo.transform.position.y;
-							moveTile(tTwo, tTwoXMovement, tTwoYMovement);
+							moveTile (tTwo, tTwoXMovement, tTwoYMovement);
 					
 
 						} else {
@@ -132,7 +140,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	/// <param name="tile">Th tile to move.</param>
 	/// <param name="xMovement">X movement.</param>
 	/// <param name="yMovement">Y movement.</param>
-	private void moveTile(Tile tile, float xMovement, float yMovement){
+	private void moveTile (Tile tile, float xMovement, float yMovement)
+	{
 		// Remove it from the grid while it moves
 		grid [(int)tile.transform.position.x, (int)tile.transform.position.y] = null;
 		tile.setTileMovementListener (this);	
@@ -148,7 +157,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	/// <param name="inGrid">The grid to check.</param>
 	private void checkAndRemoveMatches (Tile[,] inGrid)
 	{
-		HashSet<Tile> matches = findMatches (inGrid);
+		HashSet<Tile> matches = findMatches (inGrid, true);
 		clearMatches (matches);
 	}
 
@@ -157,7 +166,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	/// </summary>
 	/// <returns>The matches found in the grid.</returns>
 	/// <param name="inGrid">The grid to check for matches.</param>
-	private HashSet<Tile> findMatches (Tile[,] inGrid)
+	/// <param name="updateScore">Whether or not the user's score should be increased for any matches found.</param>
+	private HashSet<Tile> findMatches (Tile[,] inGrid, bool updateScore)
 	{
 		HashSet<Tile> markedForDeletion = new HashSet<Tile> ();
 		List<Tile> matches = new List<Tile> ();
@@ -166,7 +176,10 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		for (int x = 0; x < boardSize; x++) {
 
 			// Checking a new column, clear the list of matching tiles
-			resetMatches (matches, markedForDeletion);
+			if (matches.Count >= minTilesForMatch) {
+				Debug.Log ("reset 1");
+			}
+			resetMatches (matches, markedForDeletion, updateScore);
 
 			for (int y = 0; y < boardSize; y++) {
 					
@@ -175,7 +188,10 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				if (matches.Count > 0 && !matches [0].tag.Equals (currentObject.tag)) {
 
 					// Tile is different from those in the current list of matches, reset
-					resetMatches (matches, markedForDeletion);
+					if (matches.Count >= minTilesForMatch) {
+						Debug.Log ("reset 2");
+					}
+					resetMatches (matches, markedForDeletion, updateScore);
 				}
 
 				matches.Add (currentObject);
@@ -183,14 +199,20 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		}
 
 		// Done checking columns, reset
-		resetMatches (matches, markedForDeletion);
+		if (matches.Count >= minTilesForMatch) {
+			Debug.Log ("reset 3");
+		}
+		resetMatches (matches, markedForDeletion, updateScore);
 
 
 		// Check rows
 		for (int y = 0; y < boardSize; y++) {
 
 			// Checking a new column, clear the list of matching tiles
-			resetMatches (matches, markedForDeletion);
+			if (matches.Count >= minTilesForMatch) {
+				Debug.Log ("reset 4");
+			}
+			resetMatches (matches, markedForDeletion, updateScore);
 
 			for (int x = 0; x < boardSize; x++) {
 
@@ -199,7 +221,10 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				if (matches.Count > 0 && !matches [0].tag.Equals (currentObject.tag)) {
 
 					// Tile is different from those in the current list of matches, reset
-					resetMatches (matches, markedForDeletion);
+					if (matches.Count >= minTilesForMatch) {
+						Debug.Log ("reset 5");
+					}
+					resetMatches (matches, markedForDeletion, updateScore);
 				}
 
 				matches.Add (currentObject);
@@ -231,7 +256,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 				g.setTileMovementListener (this);	
 				tilesToMove++;
-				g.delete();
+				g.delete ();
 			}
 				
 			List<Tile> newTiles = new List<Tile> ();
@@ -288,20 +313,21 @@ public class GameManager : MonoBehaviour, TileMovementListener
 					grid [(int)x, (int)y] = null;
 				}
 				tile.setTileMovementListener (this);
-				Debug.Log ("added tile " + tile.transform.position.x + "," + tile.transform.position.y);
+//				Debug.Log ("added tile " + tile.transform.position.x + "," + tile.transform.position.y);
 				pendingMovements.Add (tile, movement);		
 			}
 		}
 	}
 
-	public void deletionFinished(){
+	public void deletionFinished ()
+	{
 		movedTiles++;
 
-		Debug.Log ("deletions: " + movedTiles + " / " + tilesToMove);
+//		Debug.Log ("deletions: " + movedTiles + " / " + tilesToMove);
 
 		if (movedTiles == tilesToMove) {
 
-			Debug.Log ("cleared pendingMovements");
+//			Debug.Log ("cleared pendingMovements");
 
 			movedTiles = 0;
 			tilesToMove = pendingMovements.Count;
@@ -325,7 +351,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		// Place it back into the grid at the new position
 		grid [(int)tile.transform.position.x, (int)tile.transform.position.y] = tile;
 		movedTiles++;
-		Debug.Log ("moves " + movedTiles + "/" + tilesToMove);
+//		Debug.Log ("moves " + movedTiles + "/" + tilesToMove);
 //		Debug.Log (tile.tag + " now at " + tile.transform.position.x + "," + tile.transform.position.y);
 		if (movedTiles == tilesToMove) {
 			movedTiles = 0;
@@ -356,15 +382,21 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	/// Clears the list of matches being checked right now. If there were enough for a match, they will be added to the list of
 	/// pending deletions.
 	/// </summary>
-	/// <param name="checking">Checking.</param>
-	/// <param name="markedForDeletion">Marked for deletion.</param>
-	private void resetMatches (List<Tile> checking, HashSet<Tile> markedForDeletion)
+	/// <param name="checking">List of matching tiles. If more than #minTilesForMatch, these will be added to markedForDeletion.</param>
+	/// <param name="markedForDeletion">The list of tiles that will be removed after checking the entire grid for matches</param>
+	private void resetMatches (List<Tile> checking, HashSet<Tile> markedForDeletion, bool updateScore)
 	{
 		if (checking.Count >= minTilesForMatch) {
 			markedForDeletion.UnionWith (checking);
+
+			if (updateScore) {
+				Debug.Log ("clearing " + checking.Count + " matched tiles.");
+				score += 100 * (Int32)Math.Pow (checking.Count, 2);
+				Debug.Log ("score is " + score);
+				textViewScore.text = score.ToString();
+			}
 		}
 
 		checking.Clear ();
 	}
-
 }
