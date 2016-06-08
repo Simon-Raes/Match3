@@ -52,6 +52,9 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	void Update ()
 	{
 		checkClick ();
+		// TODO also support dragging (for mobile)
+		// store the tile where the drag was started, then after dragging for 1+ distance: check the valid tile that is closest to the touch point
+		// so just check if above or below / to the left or right of a 45 degree angle starting from the first touch point, you know!
 	}
 
 	private void setupBoard ()
@@ -204,7 +207,6 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		// Done checking columns, reset
 		resetMatches (matches, markedForDeletion, updateScore);
 
-
 		// Check rows
 		for (int y = 0; y < boardSize; y++) {
 
@@ -343,6 +345,11 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	/// <param name="tile">The tile that has finished moving. Will be at its target position. </param>
 	public void movementFinished (Tile tile)
 	{
+
+
+
+
+
 		// Place it back into the grid at the new position
 		grid [(int)tile.transform.position.x, (int)tile.transform.position.y] = tile;
 		movedTiles++;
@@ -351,17 +358,211 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		if (movedTiles == tilesToMove) {
 			movedTiles = 0;
 			tilesToMove = 0;
+
+			// FIXME this won't get called on game launch if the initial grid does not contain any matches
+			// no matches -> no movements finished
+			checkForMoves ();
+
 			checkAndRemoveMatches (grid);
 		}
 	}
 
-	private void checkPossibleMoves ()
+	private HashSet<Tile> checkForMoves ()
 	{
-		// TODO check if there are any moves left
-		// TODO can this already be done above? doubt it 
+		HashSet<Tile> matchers = new HashSet<Tile> ();
+
+
+		for (int r = 0; r < boardSize; r++) {
+			checkForMovesInRow (r);
+		}
+
+		for (int c = 0; c < boardSize; c++) {
+			checkForMovesInColumn (c);
+		}
+
+		return null;
+
 	}
 
+	// Uses a sliding window of minTilesForMatch tiles and checks if the window contains
+	// (minTilesForMatch-1) matching tiles.
+	// If yes, checks if a tile can be moved into that slot to create a matching group of minTilesForMatch tiles.
+	// Should return the location of a tile that can be swapped to create a match
+	// if a tile is missing in the middle, we only have to check above and below
+	// if a tile is missing at the sides, we also have to check left OR right (depening on the tiles positions in the windows)
+	private HashSet<Tile> checkForMovesInRow (int row)
+	{
+		HashSet<Tile> matchers = new HashSet<Tile> ();
 
+		Tile[] checking = new Tile[3];
+		Tile aTile = null;
+
+		for (int i = 0; i + 2 < boardSize; i++) {
+
+			checking [0] = grid [i, row];
+			checking [1] = grid [i + 1, row];
+			checking [2] = grid [i + 2, row];
+
+
+			if (checking [0].tag == checking [1].tag) {
+				// Need to check if something can be moved into pos 2 to create a match.
+
+				if (i + 3 < boardSize) {
+					aTile = grid [i + 3, row];
+					if (aTile.tag == checking [0].tag) {
+						Debug.Log ("added " + aTile.tag);
+						matchers.Add (aTile);
+					}
+				}
+				if (row - 1 >= 0) {
+					aTile = grid [i + 2, row - 1];
+					if (aTile.tag == checking [0].tag) {
+						matchers.Add (aTile);
+					}
+				}
+				if (row + 1 < boardSize) {
+					aTile = grid [i + 2, row + 1];
+					if (aTile.tag == checking [0].tag) {
+						matchers.Add (aTile);
+					}
+				}
+			} else if (checking [1].tag == checking [2].tag) {
+
+				// TODO this is a lot of duplicate code with above
+				// maybe
+
+				if (i - 1 >= 0) {
+					aTile = grid [i - 1, row];
+					if (aTile.tag == checking [1].tag) {
+						matchers.Add (aTile);
+					}
+				}
+				if (row - 1 >= 0) {
+					aTile = grid [i, row - 1];
+					if (aTile.tag == checking [1].tag) {
+						matchers.Add (aTile);
+					}
+				}
+				if (row + 1 < boardSize) {
+					aTile = grid [i, row + 1];
+					if (aTile.tag == checking [1].tag) {
+						matchers.Add (aTile);
+					}
+				}
+
+			} else if (checking [0].tag == checking [2].tag) {
+				if (row - 1 >= 0) {
+					aTile = grid [i + 1, row - 1];
+					if (aTile.tag == checking [0].tag) {
+						matchers.Add (aTile);
+					}
+				}
+				if (row + 1 < boardSize) {
+					aTile = grid [i + 1, row + 1];
+					if (aTile.tag == checking [0].tag) {
+						matchers.Add (aTile);
+					}
+				}
+			}
+		}
+
+//		Debug.Log (matchers.Count);
+		if (matchers.Count > 0) {
+			Debug.Log ("moves for row " + row);
+		}
+		foreach (Tile t in matchers) {
+			Debug.Log (t.tag + t.transform.position.x + t.transform.position.y);	
+		}
+
+		return matchers;
+	}
+
+	private HashSet<Tile> checkForMovesInColumn (int col)
+	{
+		HashSet<Tile> matchers = new HashSet<Tile> ();
+
+		Tile[] checking = new Tile[3];
+		Tile aTile = null;
+
+		for (int i = 0; i + 2 < boardSize; i++) {
+
+			checking [0] = grid [col, i];
+			checking [1] = grid [col, i + 1];
+			checking [2] = grid [col, i + 2];
+
+
+			if (checking [0].tag == checking [1].tag) {
+				// Need to check if something can be moved into pos 2 to create a match.
+
+				if (i + 3 < boardSize) {
+					aTile = grid [col, i + 3];
+					if (aTile.tag == checking [0].tag) {
+						Debug.Log ("added " + aTile.tag);
+						matchers.Add (aTile);
+					}
+				}
+				if (col - 1 >= 0) {
+					aTile = grid [col - 1, i + 2];
+					if (aTile.tag == checking [0].tag) {
+						matchers.Add (aTile);
+					}
+				}
+				if (col + 1 < boardSize) {
+					aTile = grid [col + 1, i + 2];
+					if (aTile.tag == checking [0].tag) {
+						matchers.Add (aTile);
+					}
+				}
+			} else if (checking [1].tag == checking [2].tag) {
+
+				// TODO this is a lot of duplicate code with above
+				// maybe
+
+				if (i - 1 >= 0) {
+					aTile = grid [col, i - 1];
+					if (aTile.tag == checking [1].tag) {
+						matchers.Add (aTile);
+					}
+				}
+				if (col- 1 >= 0) {
+					aTile = grid [col - 1, i];
+					if (aTile.tag == checking [1].tag) {
+						matchers.Add (aTile);
+					}
+				}
+				if (col + 1 < boardSize) {
+					aTile = grid [col + 1, i];
+					if (aTile.tag == checking [1].tag) {
+						matchers.Add (aTile);
+					}
+				}
+
+			} else if (checking [0].tag == checking [2].tag) {
+				if (col - 1 >= 0) {
+					aTile = grid [col-1,i+1];
+					if (aTile.tag == checking [0].tag) {
+						matchers.Add (aTile);
+					}
+				}
+				if (col + 1 < boardSize) {
+					aTile = grid [col + 1, i + 1];
+					if (aTile.tag == checking [0].tag) {
+						matchers.Add (aTile);
+					}
+				}
+			}
+		}
+
+		//		Debug.Log (matchers.Count);
+		if (matchers.Count > 0) {
+			Debug.Log ("moves for col " + col);
+		}
+		foreach (Tile t in matchers) {
+			Debug.Log (t.tag + t.transform.position.x + t.transform.position.y);	
+		}
+
+		return matchers;
+	}
 
 
 	// utils
@@ -388,7 +589,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				
 				score += (100 * (Int32)Math.Pow (checking.Count, 2)) * combo;
 				Debug.Log ("score is " + score);
-				textViewScore.text =  "Score: " + score.ToString();
+				textViewScore.text = "Score: " + score.ToString ();
 
 				textViewCombo.text = combo + "x combo";
 				combo++;
