@@ -46,12 +46,6 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	void Start ()
 	{
 		setupBoard ();
-		int matches = checkAndRemoveMatches (grid);	
-
-		// No initial matches, check for possible moves here. (since movementFinished won't be called without matches).
-		if (matches == 0) {
-			checkForMoves ();
-		}
 	}
 
 	void Update ()
@@ -62,14 +56,22 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		// so just check if above or below / to the left or right of a 45 degree angle starting from the first touch point, you know!
 	}
 
+	/// <summary>
+	/// Spawns the initial set of (boardSize * boardSize) tiles above the board and makes them fall into place. 
+	/// </summary>
 	private void setupBoard ()
 	{
+		const int startOffset = 10;
+
 		grid = new Tile[boardSize, boardSize];
+		tilesToMove = boardSize * boardSize;
 
 		for (int x = 0; x < boardSize; x++) {
-			for (int y = 0; y < boardSize; y++) {	
+			for (int y = startOffset; y < boardSize + startOffset; y++) {	
 
-				grid [x, y] = spawnRandomTile (new Vector2 (x, y));
+				Tile t = spawnRandomTile (new Vector2 (x, y));
+				t.setTileMovementListener (this);
+				t.fall (startOffset);
 			}
 		}
 	}
