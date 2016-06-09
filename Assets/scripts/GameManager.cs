@@ -46,7 +46,12 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	void Start ()
 	{
 		setupBoard ();
-		checkAndRemoveMatches (grid);	
+		int matches = checkAndRemoveMatches (grid);	
+
+		// No initial matches, check for possible moves here. (since movementFinished won't be called without matches).
+		if (matches == 0) {
+			checkForMoves ();
+		}
 	}
 
 	void Update ()
@@ -167,10 +172,12 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	/// Grid will be automatically checked for matches once the tiles have moved into their position. 
 	/// </summary>
 	/// <param name="inGrid">The grid to check.</param>
-	private void checkAndRemoveMatches (Tile[,] inGrid)
+	/// <returns>The number of matched tiles that will be removed. </returns>
+	private int checkAndRemoveMatches (Tile[,] inGrid)
 	{
 		HashSet<Tile> matches = findMatches (inGrid, true);
 		clearMatches (matches);
+		return matches.Count;
 	}
 
 	/// <summary>
