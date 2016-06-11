@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System;
 using AssemblyCSharp;
 using UnityEngine.UI;
+using System.Linq;
 
 public class GameManager : MonoBehaviour, TileMovementListener
 {
@@ -35,6 +36,10 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	private Text textViewScore;
 	private Text textViewCombo;
 
+	private HashSet<Tile> possibleMoves = null;
+	private float lastMatchSecondsAgo = 0;
+	private Tile hintTile;
+
 	void Awake ()
 	{
 		textViewScore = GameObject.Find ("TextViewScore").GetComponent<Text> ();
@@ -54,6 +59,19 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		// TODO also support dragging (for mobile)
 		// store the tile where the drag was started, then after dragging for 1+ distance: check the valid tile that is closest to the touch point
 		// so just check if above or below / to the left or right of a 45 degree angle starting from the first touch point, you know!
+
+		if (lastMatchSecondsAgo != -1) {
+			lastMatchSecondsAgo += Time.deltaTime;	
+		}
+
+		if (lastMatchSecondsAgo > 3) {
+			lastMatchSecondsAgo = -1;
+
+			if (possibleMoves != null) {
+				hintTile =possibleMoves.ElementAt (UnityEngine.Random.Range(0, possibleMoves.Count()));
+				hintTile.hint ();
+			}
+		}
 	}
 
 	/// <summary>
@@ -78,6 +96,11 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 	private void checkClick ()
 	{
+		if (tilesToMove > 0 || pendingMovements.Count > 0) {
+			return;
+		}
+
+
 		if (Input.GetMouseButtonDown (0)) {
 			Vector2 mousePosition = Camera.main.ScreenToWorldPoint (Input.mousePosition);
 			Collider2D hitCollider = Physics2D.OverlapPoint (mousePosition);
@@ -119,6 +142,12 @@ public class GameManager : MonoBehaviour, TileMovementListener
 						HashSet<Tile> matches = findMatches (grid, false);
 
 						if (matches.Count > 0) {
+
+							lastMatchSecondsAgo = 0;
+							if (hintTile != null) {
+								hintTile.stopHint ();
+								hintTile = null;
+							}
 
 
 							// Reset combo for the new chain
@@ -354,11 +383,6 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	/// <param name="tile">The tile that has finished moving. Will be at its target position. </param>
 	public void movementFinished (Tile tile)
 	{
-
-
-
-
-
 		// Place it back into the grid at the new position
 		grid [(int)tile.transform.position.x, (int)tile.transform.position.y] = tile;
 		movedTiles++;
@@ -368,29 +392,25 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			movedTiles = 0;
 			tilesToMove = 0;
 
-			// FIXME this won't get called on game launch if the initial grid does not contain any matches
-			// no matches -> no movements finished
 			checkForMoves ();
 
 			checkAndRemoveMatches (grid);
 		}
 	}
 
-	private HashSet<Tile> checkForMoves ()
+	private void checkForMoves ()
 	{
 		HashSet<Tile> matchers = new HashSet<Tile> ();
 
-
 		for (int r = 0; r < boardSize; r++) {
-			checkForMovesInRow (r);
+			matchers.UnionWith (checkForMovesInRow (r));
 		}
 
 		for (int c = 0; c < boardSize; c++) {
-			checkForMovesInColumn (c);
+			matchers.UnionWith (checkForMovesInColumn (c));
 		}
 
-		return null;
-
+		possibleMoves = matchers;
 	}
 
 	// Uses a sliding window of minTilesForMatch tiles and checks if the window contains
@@ -533,7 +553,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 						matchers.Add (aTile);
 					}
 				}
-				if (col- 1 >= 0) {
+				if (col - 1 >= 0) {
 					aTile = grid [col - 1, i];
 					if (aTile.tag == checking [1].tag) {
 						matchers.Add (aTile);
@@ -548,7 +568,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 			} else if (checking [0].tag == checking [2].tag) {
 				if (col - 1 >= 0) {
-					aTile = grid [col-1,i+1];
+					aTile = grid [col - 1, i + 1];
 					if (aTile.tag == checking [0].tag) {
 						matchers.Add (aTile);
 					}

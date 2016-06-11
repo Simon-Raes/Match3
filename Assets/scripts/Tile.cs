@@ -8,6 +8,8 @@ public class Tile : MonoBehaviour
 
 	private TileMovementListener listener;
 
+	private const float DEFAULT_SCALE = 2;
+
 	private const float ROTATE_RANGE_MIN = 5;
 	private const float ROTATE_RANGE_MAX = 7;
 	private float rotateAngle;
@@ -16,6 +18,7 @@ public class Tile : MonoBehaviour
 	private const float ROTATE_SPEED_MAX = 12;
 	private float rotateSpeed;
 
+	private const float SCALE_SPEED_HINT = 7;
 
 	private const float SPEED_FALL = 5.5f;
 	private const float SPEED_SWAP = 5;
@@ -55,6 +58,8 @@ public class Tile : MonoBehaviour
 	{
 		speed = SPEED_SWAP;
 
+		StopCoroutine ("AnimateHint");
+
 		StartCoroutine (AnimateMovement (x, y));
 	}
 
@@ -63,6 +68,17 @@ public class Tile : MonoBehaviour
 		speed = SPEED_FALL;
 
 		StartCoroutine (AnimateMovement (0, -distance));
+	}
+
+	public void hint(){
+		StopCoroutine ("AnimateIdle");
+		StartCoroutine ("AnimateHint");
+	}
+
+	public void stopHint(){
+		transform.localScale = new Vector2(DEFAULT_SCALE, DEFAULT_SCALE);
+		StopCoroutine ("AnimateHint");
+		StartCoroutine ("AnimateIdle");
 	}
 
 	/// <summary>
@@ -118,7 +134,6 @@ public class Tile : MonoBehaviour
 	IEnumerator AnimateDeletion ()
 	{
 		float remainingTime = DELETE_DURATION;
-		float rotateSpeed;
 		float startScale = transform.localScale.x;
 		float scale = 1;
 
@@ -140,5 +155,20 @@ public class Tile : MonoBehaviour
 		listener.deletionFinished ();
 
 		yield return null;
+	}
+
+	IEnumerator AnimateHint(){
+		float scaleTime = 0;
+
+		while (true) {
+			scaleTime = scaleTime + Time.deltaTime;
+
+			float scale = 1 + .25f * Mathf.Sin (scaleTime * SCALE_SPEED_HINT);
+			Debug.Log (scale);
+
+			transform.localScale = new Vector2 (2 * scale, 2 * scale);
+
+			yield return null;
+		}
 	}
 }
