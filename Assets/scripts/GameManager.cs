@@ -21,7 +21,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	private Tile[] tiles;
 	// The array of possible faces that can be spawned
 
-
+	private const int INDICATOR_REST_POSITION = -10;
 
 	private Tile[,] grid;
 
@@ -35,6 +35,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 
 	private Text textViewScore;
 	private Text textViewCombo;
+	private Text textViewGameOver;
 
 	private HashSet<Tile> possibleMoves = null;
 	private float lastMatchSecondsAgo = 0;
@@ -46,6 +47,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		textViewScore.text = "Score: " + score;
 		textViewCombo = GameObject.Find ("TextViewCombo").GetComponent<Text> ();
 		textViewCombo.text = combo + "x combo";
+		textViewGameOver = GameObject.Find ("TextViewGameOver").GetComponent<Text> ();
 	}
 
 	void Start ()
@@ -67,8 +69,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		if (lastMatchSecondsAgo > 3) {
 			lastMatchSecondsAgo = -1;
 
-			if (possibleMoves != null) {
-				hintTile =possibleMoves.ElementAt (UnityEngine.Random.Range(0, possibleMoves.Count()));
+			if (possibleMoves != null && possibleMoves.Count () > 0) {
+				hintTile = possibleMoves.ElementAt (UnityEngine.Random.Range (0, possibleMoves.Count ()));
 				hintTile.hint ();
 			}
 		}
@@ -100,7 +102,6 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			return;
 		}
 
-
 		if (Input.GetMouseButtonDown (0)) {
 			Vector2 mousePosition = Camera.main.ScreenToWorldPoint (Input.mousePosition);
 			Collider2D hitCollider = Physics2D.OverlapPoint (mousePosition);
@@ -115,7 +116,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 				int indicatorX = (int)indicatorPosition.x;
 				int indicatorY = (int)indicatorPosition.y;
 
-				if (indicatorPosition.x == -1 && indicatorPosition.y == -1) {
+				if (indicatorPosition.x == INDICATOR_REST_POSITION && indicatorPosition.y == INDICATOR_REST_POSITION) {
 					indicatorPosition.x = (float)clickedX;
 					indicatorPosition.y = (float)clickedY;  
 
@@ -127,8 +128,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 					float yDistance = Math.Abs (indicatorPosition.y - clickedY);
 
 					if ((xDistance == 0 && yDistance == 1) || (xDistance == 1 && yDistance == 0)) {
-						indicatorPosition.x = -1;
-						indicatorPosition.y = -1;
+						indicatorPosition.x = INDICATOR_REST_POSITION;
+						indicatorPosition.y = INDICATOR_REST_POSITION;
 
 						Tile tOne = grid [indicatorX, indicatorY];
 						Tile tTwo = grid [clickedX, clickedY];
@@ -348,7 +349,6 @@ public class GameManager : MonoBehaviour, TileMovementListener
 					grid [(int)x, (int)y] = null;
 				}
 				tile.setTileMovementListener (this);
-//				Debug.Log ("added tile " + tile.transform.position.x + "," + tile.transform.position.y);
 				pendingMovements.Add (tile, movement);		
 			}
 		}
@@ -358,11 +358,7 @@ public class GameManager : MonoBehaviour, TileMovementListener
 	{
 		movedTiles++;
 
-//		Debug.Log ("deletions: " + movedTiles + " / " + tilesToMove);
-
 		if (movedTiles == tilesToMove) {
-
-//			Debug.Log ("cleared pendingMovements");
 
 			movedTiles = 0;
 			tilesToMove = pendingMovements.Count;
@@ -392,13 +388,18 @@ public class GameManager : MonoBehaviour, TileMovementListener
 			movedTiles = 0;
 			tilesToMove = 0;
 
-			checkForMoves ();
+			bool movesLeft = checkForMoves ();
 
-			checkAndRemoveMatches (grid);
+			bool matchesLeft = checkAndRemoveMatches (grid) > 0;
+
+			if (!movesLeft && !matchesLeft) {
+				textViewGameOver.text = "Game Over :(";
+				GameOver ();
+			}
 		}
 	}
 
-	private void checkForMoves ()
+	private bool checkForMoves ()
 	{
 		HashSet<Tile> matchers = new HashSet<Tile> ();
 
@@ -411,6 +412,8 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		}
 
 		possibleMoves = matchers;
+
+		return possibleMoves.Count > 0;
 	}
 
 	// Uses a sliding window of minTilesForMatch tiles and checks if the window contains
@@ -626,5 +629,19 @@ public class GameManager : MonoBehaviour, TileMovementListener
 		}
 
 		checking.Clear ();
+	}
+
+
+	/// <summary>
+	/// Ya blew it.
+	/// </summary>
+	private void GameOver ()
+	{
+		for (int row = boardSize - 1; row >= 0; row--) {
+			for (int col = 0; col < boardSize; col++) {	
+
+				grid[col,row].GameOver (10);
+			}
+		}
 	}
 }

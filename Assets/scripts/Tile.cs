@@ -20,6 +20,9 @@ public class Tile : MonoBehaviour
 
 	private const float SCALE_SPEED_HINT = 7;
 
+	private const float GAMEOVER_SPEED_MIN = 7;
+	private const float GAMEOVER_SPEED_MAX = 13;
+
 	private const float SPEED_FALL = 5.5f;
 	private const float SPEED_SWAP = 5;
 
@@ -70,6 +73,13 @@ public class Tile : MonoBehaviour
 		StartCoroutine (AnimateMovement (0, -distance));
 	}
 
+	public void GameOver (int distance)
+	{
+		speed = UnityEngine.Random.Range(GAMEOVER_SPEED_MIN, GAMEOVER_SPEED_MAX);
+
+		StartCoroutine (AnimateMovement (0, -distance, false));
+	}
+
 	public void hint(){
 		StopCoroutine ("AnimateIdle");
 		StartCoroutine ("AnimateHint");
@@ -99,12 +109,25 @@ public class Tile : MonoBehaviour
 		}
 	}
 
+
 	/// <summary>
 	/// Moves the tile the desired x and y distance.
 	/// </summary>
 	/// <param name="x">The x distance to move.</param>
 	/// <param name="y">The y distance to move.</param>
 	IEnumerator AnimateMovement (float x, float y)
+	{
+		return AnimateMovement (x, y, true);
+	}
+
+	/// <summary>
+	/// Moves the tile the desired x and y distance.
+	/// </summary>
+	/// <param name="x">The x distance to move.</param>
+	/// <param name="y">The y distance to move.</param>
+	/// <param name="alert">Whether or not to alert the listener when the movement finishes. Default is true.</param>
+
+	IEnumerator AnimateMovement (float x, float y, bool alert)
 	{
 		Vector2 startPosition = transform.position;
 		Vector2 targetPosition = transform.position;
@@ -123,7 +146,9 @@ public class Tile : MonoBehaviour
 			yield return null;
 		}
 			
-		listener.movementFinished (this);
+		if (listener != null && alert) {
+			listener.movementFinished (this);
+		}
 
 		yield return null;
 	}
@@ -152,7 +177,9 @@ public class Tile : MonoBehaviour
 			
 		Destroy (gameObject);
 
-		listener.deletionFinished ();
+		if (listener != null) {
+			listener.deletionFinished ();
+		}
 
 		yield return null;
 	}
