@@ -191,8 +191,6 @@ public class Tile : MonoBehaviour
 			scaleTime = scaleTime + Time.deltaTime;
 
 			float scale = 1 + .25f * Mathf.Sin (scaleTime * SCALE_SPEED_HINT);
-			Debug.Log (scale);
-
 			transform.localScale = new Vector2 (2 * scale, 2 * scale);
 
 			yield return null;
